@@ -343,8 +343,10 @@ void DirBrowser::updateDir (const Gtk::TreeModel::iterator& iter)
 
     // first test if some files are deleted
     bool change = true;
+    // there cannot be more removals than rows: guards against looping forever if a removal does not take effect
+    std::size_t removalsLeft = iter->children().size();
 
-    while (change) {
+    while (change && removalsLeft-- > 0) {
         change = false;
 
         for (Gtk::TreeModel::iterator it = iter->children().begin(); it != iter->children().end(); ++it)
@@ -518,7 +520,20 @@ void DirBrowser::file_changed (const Glib::RefPtr<Gio::File>& file, const Glib::
         return;
     }
 
-    updateDir (iter);
+    // The bound iterator may belong to a row that was removed meanwhile (e.g. re-expanded at startup) while
+    // its monitor still delivers events; using it loops forever in updateDir. Look the row up by its path.
+    Gtk::TreeModel::iterator row;
+    dirTreeModel->foreach_iter([&](const Gtk::TreeModel::iterator& it) -> bool {
+        if (it->get_value(dtColumns.dirname) == dirName) {
+            row = it;
+            return true; // stop
+        }
+        return false;
+    });
+
+    if (row) {
+        updateDir (row);
+    }
 }
 
 void DirBrowser::selectDir (Glib::ustring dir)
