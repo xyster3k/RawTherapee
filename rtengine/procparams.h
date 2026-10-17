@@ -1354,6 +1354,21 @@ struct SoftLightParams {
     bool operator!=(const SoftLightParams &other) const;
 };
 
+/**
+  * Parameters of the film grain tool: monochrome grain added to the luminance
+  */
+struct FilmGrainParams {
+    bool enabled;
+    int strength;   ///< 0..100
+    double size;    ///< grain size in pixels of the full-size image
+    int roughness;  ///< 0..100, share of the finer second grain layer
+
+    FilmGrainParams();
+
+    bool operator==(const FilmGrainParams &other) const;
+    bool operator!=(const FilmGrainParams &other) const;
+};
+
 
 struct DehazeParams {
     bool enabled;
@@ -1459,6 +1474,7 @@ public:
     HSVEqualizerParams      hsvequalizer;    ///< hsv wavelet parameters
     FilmSimulationParams    filmSimulation;  ///< film simulation parameters
     SoftLightParams         softlight;       ///< softlight parameters
+    FilmGrainParams         filmGrain;       ///< film grain parameters
     DehazeParams            dehaze;          ///< dehaze parameters
     FilmNegativeParams      filmNegative;    ///< Film negative parameters
     int                     rank;            ///< Custom image quality ranking

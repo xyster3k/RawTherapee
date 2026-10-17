@@ -1775,6 +1775,7 @@ private:
         }
 
         ipf.softLight(labView, params.softlight);
+        ipf.filmGrain(labView, params.filmGrain, 0, 0, 1.0);
 
 
         if (params.icm.workingTRC != ColorManagementParams::WorkingTrc::NONE  && params.icm.trcExp) {

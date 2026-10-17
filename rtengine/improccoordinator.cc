@@ -2241,6 +2241,7 @@ void ImProcCoordinator::updatePreviewImage(int todo, bool panningRelatedChange)
             }
 
             ipf.softLight(nprevl, params->softlight);
+            ipf.filmGrain(nprevl, params->filmGrain, 0, 0, scale);
 
 
             if (params->icm.workingTRC != ColorManagementParams::WorkingTrc::NONE && params->icm.trcExp) {
@@ -3556,6 +3557,7 @@ void ImProcCoordinator::process()
             || params->hsvequalizer != nextParams->hsvequalizer
             || params->filmSimulation != nextParams->filmSimulation
             || params->softlight != nextParams->softlight
+            || params->filmGrain != nextParams->filmGrain
             || params->raw != nextParams->raw
             || params->retinex != nextParams->retinex
             || params->wavelet != nextParams->wavelet

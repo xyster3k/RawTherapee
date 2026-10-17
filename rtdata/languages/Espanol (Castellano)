@@ -1403,6 +1403,10 @@ HISTORY_MSG_DEHAZE_STRENGTH;Elim. neblina - Intensidad
 HISTORY_MSG_DUALDEMOSAIC_AUTO_CONTRAST;Desentramado doble - Umbral auto
 HISTORY_MSG_DUALDEMOSAIC_CONTRAST;Desentramado doble - Umbral contraste
 HISTORY_MSG_EDGEFFECT;Respuesta de atenuación en bordes
+HISTORY_MSG_FILMGRAIN_ENABLED;Grano de película
+HISTORY_MSG_FILMGRAIN_ROUGHNESS;Grano de película - Aspereza
+HISTORY_MSG_FILMGRAIN_SIZE;Grano de película - Tamaño
+HISTORY_MSG_FILMGRAIN_STRENGTH;Grano de película - Intensidad
 HISTORY_MSG_FILMNEGATIVE_BALANCE;Película negativa - Salida de referencia
 HISTORY_MSG_FILMNEGATIVE_COLORSPACE;Espacio de color película negativa
 HISTORY_MSG_FILMNEGATIVE_ENABLED;Película negativa
@@ -1730,6 +1734,7 @@ PARTIALPASTE_EQUALIZER;Niveles de ondículas
 PARTIALPASTE_EVERYTHING;Todo
 PARTIALPASTE_EXIFCHANGES;Exif
 PARTIALPASTE_EXPOSURE;Exposición
+PARTIALPASTE_FILMGRAIN;Grano de película
 PARTIALPASTE_FILMNEGATIVE;Película negativa
 PARTIALPASTE_FILMSIMULATION;Simulación de película
 PARTIALPASTE_FLATFIELDAUTOSELECT;Auto-selección de campo plano
@@ -2440,6 +2445,12 @@ TP_EXPOSURE_TCMODE_STANDARD;Estándar
 TP_EXPOSURE_TCMODE_WEIGHTEDSTD;Estándar ponderado
 TP_EXPOS_BLACKPOINT_LABEL;Puntos de negro Raw
 TP_EXPOS_WHITEPOINT_LABEL;Puntos de blanco Raw
+TP_FILMGRAIN_LABEL;Grano de película
+TP_FILMGRAIN_ROUGHNESS;Aspereza
+TP_FILMGRAIN_ROUGHNESS_TOOLTIP;Añade una segunda capa de grano más fino para una textura más irregular y natural.
+TP_FILMGRAIN_SIZE;Tamaño del grano
+TP_FILMGRAIN_SIZE_TOOLTIP;Tamaño de un grano en píxeles de la imagen a tamaño completo, para que el grano se vea igual en la vista previa y en la imagen guardada.
+TP_FILMGRAIN_STRENGTH;Intensidad
 TP_FILMNEGATIVE_BLUE;Proporción de azul
 TP_FILMNEGATIVE_BLUEBALANCE;Frío/Cálido
 TP_FILMNEGATIVE_COLORSPACE;Espacio de color de inversión:

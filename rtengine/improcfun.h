@@ -99,6 +99,7 @@ struct LocalContrastParams;
 struct LocallabParams;
 struct SharpeningParams;
 struct SoftLightParams;
+struct FilmGrainParams;
 struct ToneEqualizerParams;
 struct VibranceParams;
 struct VignettingParams;
@@ -603,6 +604,8 @@ enum class BlurType {
     void toneEqualizer(Imagefloat *rgb);
     void toneEqualizer(Imagefloat *rgb, const procparams::ToneEqualizerParams &params, const Glib::ustring &workingProfile, double scale, bool multiThread);
     void softLight(LabImage *lab, const procparams::SoftLightParams &softLightParams);
+    // lab pixel (i, j) is at (offsetX + j * imageScale, offsetY + i * imageScale) of the full-size image
+    void filmGrain(LabImage *lab, const procparams::FilmGrainParams &grainParams, int offsetX, int offsetY, double imageScale);
     void labColorCorrectionRegions(LabImage *lab);
 
     Image8*     lab2rgb(LabImage* lab, int cx, int cy, int cw, int ch, const procparams::ColorManagementParams &icm, bool consider_histogram_settings = true);

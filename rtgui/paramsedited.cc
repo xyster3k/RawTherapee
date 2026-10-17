@@ -976,6 +976,10 @@ void ParamsEdited::set(bool v)
     filmSimulation.strength = v;
     softlight.enabled = v;
     softlight.strength = v;
+    filmGrain.enabled = v;
+    filmGrain.strength = v;
+    filmGrain.size = v;
+    filmGrain.roughness = v;
     dehaze.enabled = v;
     dehaze.strength = v;
     dehaze.showDepthMap = v;
@@ -2646,6 +2650,10 @@ void ParamsEdited::initFrom(const std::vector<rtengine::procparams::ProcParams>&
         filmSimulation.strength = filmSimulation.strength && p.filmSimulation.strength == other.filmSimulation.strength;
         softlight.enabled = softlight.enabled && p.softlight.enabled == other.softlight.enabled;
         softlight.strength = softlight.strength && p.softlight.strength == other.softlight.strength;
+        filmGrain.enabled = filmGrain.enabled && p.filmGrain.enabled == other.filmGrain.enabled;
+        filmGrain.strength = filmGrain.strength && p.filmGrain.strength == other.filmGrain.strength;
+        filmGrain.size = filmGrain.size && p.filmGrain.size == other.filmGrain.size;
+        filmGrain.roughness = filmGrain.roughness && p.filmGrain.roughness == other.filmGrain.roughness;
         dehaze.enabled = dehaze.enabled && p.dehaze.enabled == other.dehaze.enabled;
         dehaze.strength = dehaze.strength && p.dehaze.strength == other.dehaze.strength;
         dehaze.showDepthMap = dehaze.showDepthMap && p.dehaze.showDepthMap == other.dehaze.showDepthMap;
@@ -8820,6 +8828,22 @@ void ParamsEdited::combine(rtengine::procparams::ProcParams& toEdit, const rteng
 
     if (softlight.strength) {
         toEdit.softlight.strength = dontforceSet && options.baBehav[ADDSET_SOFTLIGHT_STRENGTH] ? toEdit.softlight.strength + mods.softlight.strength : mods.softlight.strength;
+    }
+
+    if (filmGrain.enabled) {
+        toEdit.filmGrain.enabled = mods.filmGrain.enabled;
+    }
+
+    if (filmGrain.strength) {
+        toEdit.filmGrain.strength = mods.filmGrain.strength;
+    }
+
+    if (filmGrain.size) {
+        toEdit.filmGrain.size = mods.filmGrain.size;
+    }
+
+    if (filmGrain.roughness) {
+        toEdit.filmGrain.roughness = mods.filmGrain.roughness;
     }
 
     if (dehaze.enabled) {

@@ -80,6 +80,7 @@
 #include "tools/sharpening.h"
 #include "tools/sharpenmicro.h"
 #include "tools/softlight.h"
+#include "tools/filmgrain.h"
 #include "tools/spot.h"
 #include "tools/tonecurve.h"
 #include "tools/toneequalizer.h"
@@ -158,6 +159,7 @@ protected:
     DirPyrEqualizer* dirpyrequalizer;
     HSVEqualizer* hsvequalizer;
     SoftLight *softlight;
+    FilmGrain *filmGrain;
     Dehaze *dehaze;
     FilmSimulation *filmSimulation;
     SensorBayer * sensorbayer;
@@ -312,6 +314,7 @@ public:
         FATTAL,
         FILM_NEGATIVE,
         PD_SHARPENING,
+        FILM_GRAIN,
     };
 
     struct ToolTree {

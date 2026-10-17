@@ -232,6 +232,7 @@ PartialPasteDlg::PartialPasteDlg (const Glib::ustring &title, Gtk::Window* paren
     localcontrast = Gtk::manage(new Gtk::CheckButton(M("PARTIALPASTE_LOCALCONTRAST")));
     sharpenedge = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_SHARPENEDGE")));
     sharpenmicro = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_SHARPENMICRO")));
+    filmgrain   = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_FILMGRAIN")));
     impden      = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_IMPULSEDENOISE")));
     dirpyrden   = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_DIRPYRDENOISE")));
     defringe    = Gtk::manage (new Gtk::CheckButton (M("PARTIALPASTE_DEFRINGE")));
@@ -351,6 +352,7 @@ PartialPasteDlg::PartialPasteDlg (const Glib::ustring &title, Gtk::Window* paren
     vboxes[1]->pack_start (*localcontrast, Gtk::PACK_SHRINK, 2);
     vboxes[1]->pack_start (*sharpenedge, Gtk::PACK_SHRINK, 2);
     vboxes[1]->pack_start (*sharpenmicro, Gtk::PACK_SHRINK, 2);
+    vboxes[1]->pack_start (*filmgrain, Gtk::PACK_SHRINK, 2);
     vboxes[1]->pack_start (*impden, Gtk::PACK_SHRINK, 2);
     vboxes[1]->pack_start (*dirpyrden, Gtk::PACK_SHRINK, 2);
     vboxes[1]->pack_start (*defringe, Gtk::PACK_SHRINK, 2);
@@ -519,6 +521,7 @@ PartialPasteDlg::PartialPasteDlg (const Glib::ustring &title, Gtk::Window* paren
     localcontrastConn = localcontrast->signal_toggled().connect (sigc::bind (sigc::mem_fun(*detail, &Gtk::CheckButton::set_inconsistent), true));
     gradsharpenConn = sharpenedge->signal_toggled().connect (sigc::bind (sigc::mem_fun(*detail, &Gtk::CheckButton::set_inconsistent), true));
     microcontrastConn = sharpenmicro->signal_toggled().connect (sigc::bind (sigc::mem_fun(*detail, &Gtk::CheckButton::set_inconsistent), true));
+    filmgrainConn   = filmgrain->signal_toggled().connect (sigc::bind (sigc::mem_fun(*detail, &Gtk::CheckButton::set_inconsistent), true));
     impdenConn      = impden->signal_toggled().connect (sigc::bind (sigc::mem_fun(*detail, &Gtk::CheckButton::set_inconsistent), true));
     dirpyrdenConn   = dirpyrden->signal_toggled().connect (sigc::bind (sigc::mem_fun(*detail, &Gtk::CheckButton::set_inconsistent), true));
     defringeConn    = defringe->signal_toggled().connect (sigc::bind (sigc::mem_fun(*detail, &Gtk::CheckButton::set_inconsistent), true));
@@ -746,6 +749,7 @@ void PartialPasteDlg::detailToggled ()
     ConnectionBlocker localcontrastBlocker(localcontrastConn);
     ConnectionBlocker gradsharpenBlocker(gradsharpenConn);
     ConnectionBlocker microcontrastBlocker(microcontrastConn);
+    ConnectionBlocker filmgrainBlocker(filmgrainConn);
     ConnectionBlocker impdenBlocker(impdenConn);
     ConnectionBlocker dirpyrdenBlocker(dirpyrdenConn);
     ConnectionBlocker defringeBlocker(defringeConn);
@@ -759,6 +763,7 @@ void PartialPasteDlg::detailToggled ()
     localcontrast->set_active(detail->get_active());
     sharpenedge->set_active (detail->get_active ());
     sharpenmicro->set_active (detail->get_active ());
+    filmgrain->set_active (detail->get_active ());
     impden->set_active (detail->get_active ());
     dirpyrden->set_active (detail->get_active ());
     defringe->set_active (detail->get_active ());
@@ -959,6 +964,10 @@ void PartialPasteDlg::applyPaste (rtengine::procparams::ProcParams* dstPP, Param
 
     if (!sharpenmicro->get_active()) {
         filterPE.sharpenMicro    = falsePE.sharpenMicro;
+    }
+
+    if (!filmgrain->get_active()) {
+        filterPE.filmGrain       = falsePE.filmGrain;
     }
 
     if (!impden->get_active ()) {

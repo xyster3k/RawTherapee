@@ -1226,6 +1226,7 @@ void Crop::update(int todo)
                             params.wavelet.enabled = false;
                             params.epd.enabled = false;
                             params.softlight.enabled = false;
+                            params.filmGrain.enabled = false;
                         }
                         /*
                         if (parent->locallListener) {
@@ -1702,6 +1703,7 @@ void Crop::update(int todo)
         }
         
         parent->ipf.softLight(labnCrop, params.softlight);
+        parent->ipf.filmGrain(labnCrop, params.filmGrain, cropx, cropy, skip);
 
         if (params.icm.workingTRC != ColorManagementParams::WorkingTrc::NONE && params.icm.trcExp) {
             const int GW = labnCrop->W;

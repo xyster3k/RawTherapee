@@ -1699,6 +1699,13 @@ struct FilmSimulationParamsEdited {
     bool strength;
 };
 
+struct FilmGrainParamsEdited {
+    bool enabled;
+    bool strength;
+    bool size;
+    bool roughness;
+};
+
 struct SoftLightParamsEdited {
     bool enabled;
     bool strength;
@@ -1868,6 +1875,7 @@ struct ParamsEdited {
     HSVEqualizerParamsEdited hsvequalizer;
     FilmSimulationParamsEdited filmSimulation;
     SoftLightParamsEdited softlight;
+    FilmGrainParamsEdited filmGrain;
     DehazeParamsEdited dehaze;
     MetaDataParamsEdited metadata;
     FilmNegativeParamsEdited filmNegative;

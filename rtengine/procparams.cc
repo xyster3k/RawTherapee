@@ -2697,6 +2697,29 @@ bool SoftLightParams::operator !=(const SoftLightParams& other) const
 }
 
 
+FilmGrainParams::FilmGrainParams() :
+    enabled(false),
+    strength(25),
+    size(1.5),
+    roughness(50)
+{
+}
+
+bool FilmGrainParams::operator ==(const FilmGrainParams& other) const
+{
+    return
+        enabled == other.enabled
+        && strength == other.strength
+        && size == other.size
+        && roughness == other.roughness;
+}
+
+bool FilmGrainParams::operator !=(const FilmGrainParams& other) const
+{
+    return !(*this == other);
+}
+
+
 DehazeParams::DehazeParams() :
     enabled(false),
     strength(50),
@@ -2967,6 +2990,8 @@ void ProcParams::setDefaults()
     filmSimulation = {};
 
     softlight = {};
+
+    filmGrain = {};
 
     dehaze = {};
 
@@ -3641,6 +3666,12 @@ int ProcParams::save(const Glib::ustring& fname, const Glib::ustring& fname2, bo
 // Soft Light
         saveToKeyfile(!pedited || pedited->softlight.enabled, "SoftLight", "Enabled", softlight.enabled, keyFile);
         saveToKeyfile(!pedited || pedited->softlight.strength, "SoftLight", "Strength", softlight.strength, keyFile);
+
+// Film grain
+        saveToKeyfile(!pedited || pedited->filmGrain.enabled, "FilmGrain", "Enabled", filmGrain.enabled, keyFile);
+        saveToKeyfile(!pedited || pedited->filmGrain.strength, "FilmGrain", "Strength", filmGrain.strength, keyFile);
+        saveToKeyfile(!pedited || pedited->filmGrain.size, "FilmGrain", "Size", filmGrain.size, keyFile);
+        saveToKeyfile(!pedited || pedited->filmGrain.roughness, "FilmGrain", "Roughness", filmGrain.roughness, keyFile);
 
 // Film simulation
         saveToKeyfile(!pedited || pedited->filmSimulation.enabled, "Film Simulation", "Enabled", filmSimulation.enabled, keyFile);
@@ -4959,6 +4990,13 @@ int ProcParams::load(const Glib::ustring& fname, ParamsEdited* pedited)
             assignFromKeyfile(keyFile, "SoftLight", "Strength", softlight.strength, pedited->softlight.strength);
         }
 
+        if (keyFile.has_group("FilmGrain")) {
+            assignFromKeyfile(keyFile, "FilmGrain", "Enabled", filmGrain.enabled, pedited->filmGrain.enabled);
+            assignFromKeyfile(keyFile, "FilmGrain", "Strength", filmGrain.strength, pedited->filmGrain.strength);
+            assignFromKeyfile(keyFile, "FilmGrain", "Size", filmGrain.size, pedited->filmGrain.size);
+            assignFromKeyfile(keyFile, "FilmGrain", "Roughness", filmGrain.roughness, pedited->filmGrain.roughness);
+        }
+
         if (keyFile.has_group("Dehaze")) {
             assignFromKeyfile(keyFile, "Dehaze", "Enabled", dehaze.enabled, pedited->dehaze.enabled);
             assignFromKeyfile(keyFile, "Dehaze", "Strength", dehaze.strength, pedited->dehaze.strength);
@@ -5351,6 +5389,7 @@ bool ProcParams::operator ==(const ProcParams& other) const
         && hsvequalizer == other.hsvequalizer
         && filmSimulation == other.filmSimulation
         && softlight == other.softlight
+        && filmGrain == other.filmGrain
         && rgbCurves == other.rgbCurves
         && colorToning == other.colorToning
         && metadata == other.metadata

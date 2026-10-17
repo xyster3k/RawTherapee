@@ -1302,7 +1302,8 @@ IImage8* Thumbnail::processImage (const procparams::ProcParams& params, eSensorT
     //ColorTemp::CAT02 (baseImg, &params)   ;//perhaps not good!
 
     ImProcFunctions ipf (&params, forHistogramMatching); // enable multithreading when forHistogramMatching is true
-    ipf.setScale (sqrt (double (fw * fw + fh * fh)) / sqrt (double (thumbImg->getWidth() * thumbImg->getWidth() + thumbImg->getHeight() * thumbImg->getHeight()))*scale);
+    const double fullSizeScale = sqrt (double (fw * fw + fh * fh)) / sqrt (double (thumbImg->getWidth() * thumbImg->getWidth() + thumbImg->getHeight() * thumbImg->getHeight()))*scale;
+    ipf.setScale (fullSizeScale);
     ipf.updateColorProfiles (ICCStore::getInstance()->getDefaultMonitorProfileName(), RenderingIntent(settings->monitorIntent), false, false);
 
     // Process film negative BEFORE colorspace conversion, if needed
@@ -1892,6 +1893,7 @@ IImage8* Thumbnail::processImage (const procparams::ProcParams& params, eSensorT
     }
 
     ipf.softLight(labView, params.softlight);
+    ipf.filmGrain(labView, params.filmGrain, 0, 0, fullSizeScale);
 
     if (params.icm.workingTRC != ColorManagementParams::WorkingTrc::NONE && params.icm.trcExp) {
         const int GW = labView->W;
