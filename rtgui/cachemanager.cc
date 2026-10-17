@@ -156,6 +156,20 @@ Thumbnail* CacheManager::getEntry (const Glib::ustring& fname)
 }
 
 
+Thumbnail* CacheManager::getOpenEntry (const Glib::ustring& fname)
+{
+    MyMutex::MyLock lock (mutex);
+
+    const auto iterator = openEntries.find (fname);
+
+    if (iterator == openEntries.end ()) {
+        return nullptr;
+    }
+
+    iterator->second->increaseRef ();
+    return iterator->second;
+}
+
 void CacheManager::deleteEntry (const Glib::ustring& fname)
 {
     MyMutex::MyLock lock (mutex);

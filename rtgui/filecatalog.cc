@@ -23,8 +23,11 @@
 #include <iterator>
 #include <iostream>
 #include <iomanip>
+#include <cstdlib>
+#include <cwctype>
 
 #include <glib/gstdio.h>
+#include <glibmm/fileutils.h>
 
 #include "rtengine/rt_math.h"
 #include "rtengine/procparams.h"
@@ -46,9 +49,86 @@
 #include "toolbar.h"
 #include "windows/renamedlg.h"
 
+#ifdef _WIN32
+#include "rtengine/leanwindows.h"
+#else
+#include <cerrno>
+#include <csignal>
+#endif
+
 using namespace std;
 
 namespace {
+
+// True if pid is a running RawTherapee process (the owner of a sidecar lock is still alive)
+bool isRawTherapeeRunning(long pid)
+{
+#ifdef _WIN32
+    const HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, static_cast<DWORD>(pid));
+
+    if (!process) {
+        // a process we may not inspect (e.g. elevated) exists: keep its lock
+        return GetLastError() == ERROR_ACCESS_DENIED;
+    }
+
+    DWORD exitCode = 0;
+    bool alive = GetExitCodeProcess(process, &exitCode) && exitCode == STILL_ACTIVE;
+
+    if (alive) {
+        // the pid may have been reused by another program
+        wchar_t imagePath[MAX_PATH];
+        DWORD length = MAX_PATH;
+
+        if (QueryFullProcessImageNameW(process, 0, imagePath, &length)) {
+            std::wstring image(imagePath, length);
+            std::transform(image.begin(), image.end(), image.begin(), ::towlower);
+            alive = image.find(L"rawtherapee") != std::wstring::npos;
+        }
+    }
+
+    CloseHandle(process);
+    return alive;
+#else
+    return pid > 0 && (kill(static_cast<pid_t>(pid), 0) == 0 || errno == EPERM);
+#endif
+}
+
+// Removes <image>.pp3.lock files left behind by RawTherapee processes that no longer run (crash, killed)
+void removeStaleSidecarLocks(const std::vector<Glib::RefPtr<Gio::File>>& dirs)
+{
+    static const Glib::ustring lockSuffix = App::PARAM_FILE_EXTENSION + ".lock";
+
+    for (const auto& dir : dirs) {
+        try {
+            Glib::Dir entries(dir->get_path());
+
+            for (const std::string& entry : entries) {
+                const Glib::ustring name = entry;
+
+                if (name.length() <= lockSuffix.length() || name.substr(name.length() - lockSuffix.length()).lowercase() != lockSuffix) {
+                    continue;
+                }
+
+                const std::string lockPath = Glib::build_filename(dir->get_path(), entry);
+                std::string contents;
+
+                try {
+                    contents = Glib::file_get_contents(lockPath);
+                } catch (const Glib::FileError&) {
+                    continue;
+                }
+
+                const auto pidPos = contents.find("pid=");
+                const long pid = pidPos == std::string::npos ? 0 : std::atol(contents.c_str() + pidPos + 4);
+
+                if (pid > 0 && !isRawTherapeeRunning(pid)) {
+                    g_remove(lockPath.c_str());
+                }
+            }
+        } catch (const Glib::Error&) {
+        }
+    }
+}
 
 void getFilesRecursively(
     const Glib::ustring &dir_path,
@@ -561,6 +641,7 @@ FileCatalog::FileCatalog (CoarsePanel* cp, ToolBar* tb, FilePanel* filepanel) :
 FileCatalog::~FileCatalog()
 {
     idle_register.destroy();
+    changedSidecarsTimer.disconnect();
 
     for (int i = 0; i < 5; i++) {
         delete iranked[i];
@@ -636,6 +717,8 @@ void FileCatalog::closeDir ()
     }
 
     dirMonitors.clear();
+    changedSidecarsTimer.disconnect();
+    changedSidecarImages.clear();
 
     // ignore old requests
     ++selectedDirectoryId;
@@ -695,6 +778,7 @@ void FileCatalog::dirSelected (const Glib::ustring& dirname, const Glib::ustring
         BrowsePath->set_text(selectedDirectory);
         buttonBrowsePath->set_image(*iRefreshWhite);
         fileNameList = getFileList(&allDirs);
+        removeStaleSidecarLocks(allDirs);
 
         for (unsigned int i = 0; i < fileNameList.size(); i++) {
             if (openfile.empty() || fileNameList[i] != openfile) { // if we opened a file at the beginning don't add it again
@@ -1898,6 +1982,19 @@ void FileCatalog::reparseDirectory ()
 
 void FileCatalog::on_dir_changed (const Glib::RefPtr<Gio::File>& file, const Glib::RefPtr<Gio::File>& other_file, Gio::FileMonitorEvent event_type, bool internal)
 {
+    // A sidecar written by another program: reload it into its thumbnail (debounced, writers emit several events)
+    const Glib::ustring path = file->get_parse_name();
+    const Glib::ustring::size_type extLen = App::PARAM_FILE_EXTENSION.length();
+
+    if (path.length() > extLen && path.substr(path.length() - extLen).lowercase() == App::PARAM_FILE_EXTENSION) {
+        if (event_type == Gio::FILE_MONITOR_EVENT_CREATED || event_type == Gio::FILE_MONITOR_EVENT_CHANGED
+                || event_type == Gio::FILE_MONITOR_EVENT_CHANGES_DONE_HINT || event_type == Gio::FILE_MONITOR_EVENT_DELETED) {
+            changedSidecarImages.insert(path.substr(0, path.length() - extLen));
+            changedSidecarsTimer.disconnect();
+            changedSidecarsTimer = Glib::signal_timeout().connect(sigc::mem_fun(*this, &FileCatalog::reloadChangedSidecars), 300);
+        }
+        return;
+    }
 
     if ((App::get().options().has_retained_extention(file->get_parse_name())
             && (event_type == Gio::FILE_MONITOR_EVENT_CREATED || event_type == Gio::FILE_MONITOR_EVENT_DELETED || event_type == Gio::FILE_MONITOR_EVENT_CHANGED))
@@ -1906,6 +2003,23 @@ void FileCatalog::on_dir_changed (const Glib::RefPtr<Gio::File>& file, const Gli
     {
         reparseDirectory ();
     }
+}
+
+bool FileCatalog::reloadChangedSidecars ()
+{
+    const std::set<Glib::ustring> images = std::move(changedSidecarImages);
+    changedSidecarImages.clear();
+
+    for (const auto& image : images) {
+        Thumbnail* const thumbnail = cacheMgr->getOpenEntry(image);
+
+        if (thumbnail) {
+            thumbnail->reloadProcParamsIfChangedOnDisk();
+            thumbnail->decreaseRef();
+        }
+    }
+
+    return false; // one-shot timer
 }
 
 void FileCatalog::addFile (const Glib::ustring& fName)

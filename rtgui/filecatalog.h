@@ -164,6 +164,11 @@ private:
 
     std::vector<FileMonitorInfo> dirMonitors;
 
+    // Live sidecars: images whose .pp3 changed on disk, reloaded together shortly after the last event
+    std::set<Glib::ustring> changedSidecarImages;
+    sigc::connection changedSidecarsTimer;
+    bool reloadChangedSidecars ();
+
     IdleRegister idle_register;
 
     void addAndOpenFile (const Glib::ustring& fname);

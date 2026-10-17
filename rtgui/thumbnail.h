@@ -105,6 +105,23 @@ class Thumbnail
     // vector of listeners
     std::vector<ThumbnailListener*> listeners;
 
+    // Live sidecar support: the content of the sidecar (.pp3 next to the image) as RawTherapee last
+    // read or wrote it. A different content on disk means another program changed the sidecar.
+    struct SidecarState {
+        bool exists = false;
+        std::size_t hash = 0;
+        bool operator ==(const SidecarState& other) const { return exists == other.exists && hash == other.hash; }
+    };
+    SidecarState    sidecarState;
+    int             editorOpenCount = 0; // >0 while the image is open in an editor: its sidecar is locked
+
+    void            _loadProcParams ();
+    Glib::ustring   getSidecarFileName () const;
+    SidecarState    readSidecarState () const;
+    void            rememberSidecarState ();
+    bool            sidecarChangedOnDisk () const;
+    void            backupExternalSidecar () const;
+
     void            _loadThumbnail (bool firstTrial = true);
     void            _saveThumbnail ();
     void            _generateThumbnailImage ();
@@ -136,6 +153,12 @@ public:
     void              setProcParams (const rtengine::procparams::ProcParams& pp, ParamsEdited* pe = nullptr, int whoChangedIt = -1, bool updateCacheNow = true, bool resetToDefault = false);
     void              clearProcParams (int whoClearedIt = -1);
     void              loadProcParams ();
+
+    // Re-reads the sidecar if another program changed it and notifies the listeners. Does nothing while
+    // the image is open in an editor. Returns true if the params were reloaded.
+    bool              reloadProcParamsIfChangedOnDisk ();
+    // Locks the sidecar for external tools while the image is open in an editor (<image>.pp3.lock).
+    void              setOpenInEditor (bool open);
 
     void              notifylisterners_procParamsChanged(int whoChangedIt);
 

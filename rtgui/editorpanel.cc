@@ -1256,6 +1256,9 @@ void EditorPanel::open (Thumbnail* tmb, rtengine::InitialImage* isrc)
 
     // initialize everything
     openThm = tmb;
+    // start from the newest sidecar on disk, then lock it for external tools while it is open here
+    openThm->reloadProcParamsIfChangedOnDisk();
+    openThm->setOpenInEditor(true);
 
     fname = openThm->getFileName();
     if (fPanel && fPanel->fileCatalog) {
@@ -1322,6 +1325,7 @@ void EditorPanel::close ()
 {
     if (ipc) {
         saveProfile ();
+        openThm->setOpenInEditor(false);
         // close image processor and the current thumbnail
         tpc->closeImage ();    // this call stops image processing
         tpc->writeOptions ();
@@ -1352,6 +1356,8 @@ void EditorPanel::close ()
         // If the file was deleted somewhere, the openThm.descreaseRef delete the object, but we don't know here
         if (Glib::file_test (fname, Glib::FILE_TEST_EXISTS)) {
             openThm->removeThumbnailListener (this);
+            // pick up what external tools wrote while the image was locked (only if the user changed nothing)
+            openThm->reloadProcParamsIfChangedOnDisk();
             openThm->decreaseRef ();
         }
     }

@@ -28,7 +28,11 @@
 #include "rtengine/procparams.h"
 #include "rtengine/profiling.h"
 #include "rtengine/rtthumbnail.h"
+#include <functional>
+#include <iostream>
 #include <glib/gstdio.h>
+#include <giomm/file.h>
+#include <glibmm/fileutils.h>
 #include <glibmm/timezone.h>
 
 #include "rtengine/dynamicprofile.h"
@@ -49,6 +53,8 @@
 #ifdef _WIN32
 #include "rtengine/leanwindows.h"
 #include <shellapi.h>
+#else
+#include <unistd.h>
 #endif // _WIN32
 
 namespace {
@@ -574,7 +580,11 @@ void Thumbnail::notifylisterners_procParamsChanged(int whoChangedIt)
 void Thumbnail::loadProcParams()
 {
     MyMutex::MyLock lock(mutex);
+    _loadProcParams();
+}
 
+void Thumbnail::_loadProcParams()
+{
     pparamsValid = false;
     pparams->setDefaults();
 
@@ -596,6 +606,102 @@ void Thumbnail::loadProcParams()
             const int ppres = pparams->load(fname + App::PARAM_FILE_EXTENSION);
             pparamsValid = !ppres && pparams->ppVersion >= 220;
         }
+    }
+
+    rememberSidecarState();
+}
+
+Glib::ustring Thumbnail::getSidecarFileName() const
+{
+    return fname + App::PARAM_FILE_EXTENSION;
+}
+
+Thumbnail::SidecarState Thumbnail::readSidecarState() const
+{
+    SidecarState state;
+    gchar* contents = nullptr;
+    gsize length = 0;
+
+    if (g_file_get_contents(getSidecarFileName().c_str(), &contents, &length, nullptr)) {
+        state.exists = true;
+        state.hash = std::hash<std::string>()(std::string(contents, length));
+        g_free(contents);
+    }
+
+    return state;
+}
+
+void Thumbnail::rememberSidecarState()
+{
+    sidecarState = readSidecarState();
+}
+
+bool Thumbnail::sidecarChangedOnDisk() const
+{
+    return App::get().options().saveParamsFile && !(readSidecarState() == sidecarState);
+}
+
+void Thumbnail::backupExternalSidecar() const
+{
+    const Glib::ustring backupName = getSidecarFileName() + ".external-" + Glib::DateTime::create_now_local().format("%Y%m%d-%H%M%S");
+
+    try {
+        Gio::File::create_for_path(getSidecarFileName())->copy(Gio::File::create_for_path(backupName), Gio::FILE_COPY_OVERWRITE);
+    } catch (const Glib::Error& e) {
+        std::cerr << "Could not back up the externally changed sidecar to " << backupName << ": " << e.what() << std::endl;
+    }
+}
+
+bool Thumbnail::reloadProcParamsIfChangedOnDisk()
+{
+    {
+        MyMutex::MyLock lock(mutex);
+
+        // The image open in the editor is left alone, the user's edits there take precedence
+        if (editorOpenCount > 0 || !sidecarChangedOnDisk()) {
+            return false;
+        }
+
+        // The other program may still be writing: only take a sidecar that parses completely
+        if (Glib::file_test(getSidecarFileName(), Glib::FILE_TEST_EXISTS)) {
+            ProcParams probe;
+            if (probe.load(getSidecarFileName()) || probe.ppVersion < 220) {
+                return false;
+            }
+        }
+
+        _loadProcParams();
+        loadProperties();
+        cfs.recentlySaved = false;
+    }
+
+    notifylisterners_procParamsChanged(EXTERNAL);
+    return true;
+}
+
+void Thumbnail::setOpenInEditor(bool open)
+{
+    MyMutex::MyLock lock(mutex);
+
+    const Glib::ustring lockName = getSidecarFileName() + ".lock";
+
+    if (open) {
+        if (editorOpenCount++ == 0 && App::get().options().saveParamsFile) {
+            const Glib::ustring contents = Glib::ustring::compose("RawTherapee pid=%1\n", static_cast<long>(
+#ifdef _WIN32
+                GetCurrentProcessId()
+#else
+                getpid()
+#endif
+            ));
+            try {
+                Glib::file_set_contents(lockName, contents);
+            } catch (const Glib::FileError& e) {
+                std::cerr << "Could not create the sidecar lock " << lockName << ": " << e.what() << std::endl;
+            }
+        }
+    } else if (editorOpenCount > 0 && --editorOpenCount == 0) {
+        g_remove(lockName.c_str());
     }
 }
 
@@ -640,6 +746,8 @@ void Thumbnail::clearProcParams (int whoClearedIt)
 
             fname_ = removeExtension(fname) + App::PARAM_FILE_EXTENSION;
             g_remove (fname_.c_str ());
+
+            rememberSidecarState();
 
             if (cfs.format == FT_Raw && App::get().options().internalThumbIfUntouched && cfs.thumbImgType != CacheImageData::QUICK_THUMBNAIL) {
                 // regenerate thumbnail, ie load the quick thumb again. For the rare formats not supporting quick thumbs this will
@@ -720,8 +828,9 @@ void Thumbnail::setProcParams (const ProcParams& pp, ParamsEdited* pe, int whoCh
 
         if (*pparams != pp) {
             cfs.recentlySaved = false;
-        } else if (pparamsValid && !updateCacheNow) {
-            // nothing to do
+        } else if (pparamsValid && (!updateCacheNow || (sidecarState.exists && App::get().options().saveParamsFile))) {
+            // nothing to do: the user changed nothing, so the sidecar is not rewritten (and a version
+            // written meanwhile by another program is not overwritten)
             return;
         }
 
@@ -1224,11 +1333,27 @@ void Thumbnail::updateCache (bool updatePParams, bool updateCacheImageData)
 
     if (updatePParams && pparamsValid) {
         const auto& options = App::get().options();
+        bool writeSidecar = options.saveParamsFile;
+
+        if (writeSidecar && sidecarChangedOnDisk()) {
+            if (editorOpenCount > 0) {
+                // Locked sidecar written anyway: the user's edits win, the external version is kept aside
+                backupExternalSidecar();
+            } else {
+                // Never overwrite an external change: the directory monitor reloads it into the browser
+                writeSidecar = false;
+            }
+        }
+
         pparams->save (
-            options.saveParamsFile  ? fname + App::PARAM_FILE_EXTENSION : "",
+            writeSidecar ? getSidecarFileName() : "",
             options.saveParamsCache ? getCacheFileName ("profiles", App::PARAM_FILE_EXTENSION) : "",
             true
         );
+
+        if (writeSidecar) {
+            rememberSidecarState();
+        }
     }
 
     if (updateCacheImageData) {

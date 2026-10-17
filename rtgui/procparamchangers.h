@@ -23,3 +23,4 @@ constexpr int EDITOR = 2;
 constexpr int BATCHEDITOR = 3;
 constexpr int CACHEMGR = 4;
 constexpr int SAFETYUPDATE = 5;
+constexpr int EXTERNAL = 6; // the sidecar was changed by another program

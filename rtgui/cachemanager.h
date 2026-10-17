@@ -51,6 +51,8 @@ public:
     void        init        ();
 
     Thumbnail*  getEntry    (const Glib::ustring& fname);
+    // Like getEntry, but only returns an already open entry (or nullptr). Call decreaseRef() when done.
+    Thumbnail*  getOpenEntry(const Glib::ustring& fname);
     void        deleteEntry (const Glib::ustring& fname);
     void        renameEntry (const std::string& oldfilename, const std::string& oldmd5, const std::string& newfilename);
 
